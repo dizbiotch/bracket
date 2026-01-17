@@ -1,5 +1,6 @@
 from bracket.database import database
 from bracket.models.db.club import Club, ClubCreateBody, ClubUpdateBody
+from bracket.models.db.user import UserPublic
 from bracket.utils.id_types import ClubId, UserId
 from bracket.utils.types import assert_some
 
@@ -13,6 +14,40 @@ async def sql_give_user_access_to_club(user_id: UserId, club_id: ClubId) -> None
         query=query_many_to_many,
         values={"club_id": assert_some(club_id), "user_id": user_id},
     )
+
+
+async def sql_add_collaborator_to_club(user_id: UserId, club_id: ClubId) -> None:
+    """Grant a user collaborator access to a club.
+
+    This makes the user a co-admin for all tournaments in the club.
+    """
+
+    query = """
+        INSERT INTO users_x_clubs (club_id, user_id, relation)
+        VALUES (:club_id, :user_id, 'COLLABORATOR')
+        """
+    await database.execute(query=query, values={"club_id": club_id, "user_id": user_id})
+
+
+async def sql_remove_user_from_club(user_id: UserId, club_id: ClubId) -> None:
+    """Revoke a user's access (owner or collaborator) to a club."""
+
+    query = """
+        DELETE FROM users_x_clubs
+        WHERE club_id = :club_id AND user_id = :user_id
+        """
+    await database.execute(query=query, values={"club_id": club_id, "user_id": user_id})
+
+
+async def sql_get_users_for_club(club_id: ClubId) -> list[UserPublic]:
+    query = """
+                SELECT users.*
+                FROM users
+                JOIN users_x_clubs uxc ON users.id = uxc.user_id
+                WHERE uxc.club_id = :club_id
+                """
+    results = await database.fetch_all(query=query, values={"club_id": club_id})
+    return [UserPublic.model_validate(dict(result._mapping)) for result in results]
 
 
 async def create_club(club: ClubCreateBody, user_id: UserId) -> Club:

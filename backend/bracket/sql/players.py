@@ -5,7 +5,7 @@ from heliclockter import datetime_utc
 from bracket.database import database
 from bracket.logic.ranking.statistics import START_ELO
 from bracket.models.db.player import Player, PlayerBody, PlayerToInsert
-from bracket.schema import players
+from bracket.schema import players, players_x_teams
 from bracket.utils.id_types import PlayerId, TournamentId
 from bracket.utils.pagination import PaginationPlayers
 from bracket.utils.types import dict_without_none
@@ -17,7 +17,15 @@ async def get_all_players_in_tournament(
     not_in_team: bool = False,
     pagination: PaginationPlayers | None = None,
 ) -> list[Player]:
-    not_in_team_filter = "AND players.team_id IS NULL" if not_in_team else ""
+    if not_in_team:
+        not_in_team_filter = """
+            AND NOT EXISTS (
+                SELECT 1 FROM players_x_teams pt
+                WHERE pt.player_id = players.id
+            )
+        """
+    else:
+        not_in_team_filter = ""
     limit_filter = "LIMIT :limit" if pagination is not None and pagination.limit is not None else ""
     offset_filter = (
         "OFFSET :offset" if pagination is not None and pagination.offset is not None else ""
@@ -66,7 +74,15 @@ async def get_player_count(
     *,
     not_in_team: bool = False,
 ) -> int:
-    not_in_team_filter = "AND players.team_id IS NULL" if not_in_team else ""
+    if not_in_team:
+        not_in_team_filter = """
+            AND NOT EXISTS (
+                SELECT 1 FROM players_x_teams pt
+                WHERE pt.player_id = players.id
+            )
+        """
+    else:
+        not_in_team_filter = ""
     query = f"""
         SELECT count(*)
         FROM players

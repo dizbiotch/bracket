@@ -57,3 +57,15 @@ export async function registerDemoUser(captchaToken: string | null) {
     })
     .catch((response: any) => handleRequestError(response));
 }
+
+export async function requestPasswordReset(email: string) {
+  return createAxios()
+    .post('auth/request-password-reset', { email })
+    .catch((response: any) => handleRequestError(response));
+}
+
+export async function resetPassword(token: string, new_password: string) {
+  return createAxios()
+    .post('auth/reset-password', { token, new_password })
+    .catch((response: any) => handleRequestError(response));
+}

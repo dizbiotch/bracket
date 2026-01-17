@@ -1,4 +1,4 @@
-import { Grid, Title } from '@mantine/core';
+import { Button, Grid, Title } from '@mantine/core';
 import { useTranslation } from 'react-i18next';
 
 import PlayerCreateModal from '@components/modals/player_create_modal';
@@ -7,6 +7,7 @@ import { getTableState, tableStateToPagination } from '@components/tables/table'
 import { capitalize, getTournamentIdFromRouter } from '@components/utils/util';
 import TournamentLayout from '@pages/tournaments/_tournament_layout';
 import { getPlayersPaginated } from '@services/adapter';
+import { createSinglePlayerTeams } from '@services/team';
 
 export default function PlayersPage() {
   const tableState = getTableState('name');
@@ -24,10 +25,24 @@ export default function PlayersPage() {
           <Title>{capitalize(t('players_title'))}</Title>
         </Grid.Col>
         <Grid.Col span="content">
-          <PlayerCreateModal
-            swrPlayersResponse={swrPlayersResponse}
-            tournament_id={tournamentData.id}
-          />
+          <Grid align="flex-end" gutter="xs">
+            <Grid.Col span="auto">
+              <PlayerCreateModal
+                swrPlayersResponse={swrPlayersResponse}
+                tournament_id={tournamentData.id}
+              />
+            </Grid.Col>
+            <Grid.Col span="auto">
+              <Button
+                variant="light"
+                onClick={async () => {
+                  await createSinglePlayerTeams(tournamentData.id);
+                }}
+              >
+                Use players as teams
+              </Button>
+            </Grid.Col>
+          </Grid>
         </Grid.Col>
       </Grid>
       <PlayersTable

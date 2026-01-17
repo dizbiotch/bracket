@@ -5,6 +5,7 @@ import {
   Image,
   Modal,
   NumberInput,
+  SegmentedControl,
   Select,
   TextInput,
 } from '@mantine/core';
@@ -55,6 +56,7 @@ function GeneralTournamentForm({
       auto_assign_courts: true,
       duration_minutes: 10,
       margin_minutes: 5,
+      participants_type: 'TEAMS',
     },
 
     validate: {
@@ -80,7 +82,8 @@ function GeneralTournamentForm({
           values.auto_assign_courts,
           values.start_time,
           values.duration_minutes,
-          values.margin_minutes
+          values.margin_minutes,
+          values.participants_type === 'PLAYERS'
         );
         await swrTournamentsResponse.mutate();
         setOpened(false);
@@ -148,6 +151,17 @@ function GeneralTournamentForm({
           />
         </Grid.Col>
       </Grid>
+
+      <SegmentedControl
+        fullWidth
+        mt="lg"
+        data={[
+          { label: t('teams_title'), value: 'TEAMS' },
+          { label: t('players_title'), value: 'PLAYERS' },
+        ]}
+        value={form.values.participants_type}
+        onChange={(value) => form.setFieldValue('participants_type', value)}
+      />
 
       <Checkbox
         mt="md"

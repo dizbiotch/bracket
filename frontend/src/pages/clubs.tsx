@@ -18,7 +18,7 @@ export default function ClubsPage() {
     <Layout>
       <Grid justify="space-between">
         <Grid.Col span="auto">
-          <Title>{capitalize(t('clubs_title'))}</Title>
+          <Title>{capitalize(t('teams_title'))}</Title>
         </Grid.Col>
         <Grid.Col span="content" className={classes.fullWithMobile}>
           <ClubModal swrClubsResponse={swrClubsResponse} club={null} />

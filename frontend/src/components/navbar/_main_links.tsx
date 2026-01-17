@@ -6,8 +6,8 @@ import {
   IconBrandGithub,
   IconBrowser,
   IconCalendar,
-  IconDots,
   IconHome,
+  IconLogout,
   IconScoreboard,
   IconSettings,
   IconTrophy,
@@ -15,11 +15,12 @@ import {
   IconUsers,
 } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 
 import PreloadLink from '@components/utils/link';
 import { capitalize } from '@components/utils/util';
 import { getBaseApiUrl } from '@services/adapter';
+import { performLogoutAndRedirect } from '@services/local_storage';
 import classes from './_main_links.module.css';
 
 interface MainLinkProps {
@@ -30,12 +31,23 @@ interface MainLinkProps {
 }
 
 function MainLinkMobile({ item, pathName }: { item: MainLinkProps; pathName: String }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const isLogout = item.label === t('logout_title');
+
   return (
     <>
       <UnstyledButton
         hiddenFrom="sm"
         component={PreloadLink}
-        href={item.link}
+        href={isLogout ? '/' : item.link}
+        onClick={
+          isLogout
+            ? () => {
+                performLogoutAndRedirect(t, navigate);
+              }
+            : undefined
+        }
         className={classes.mobileLink}
         style={{ width: '100%' }}
         data-active={pathName === item.link || undefined}
@@ -51,13 +63,24 @@ function MainLinkMobile({ item, pathName }: { item: MainLinkProps; pathName: Str
 }
 
 function MainLink({ item, pathName }: { item: MainLinkProps; pathName: String }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const isLogout = item.label === t('logout_title');
+
   return (
     <>
       <Tooltip position="right" label={item.label} transitionProps={{ duration: 0 }}>
         <UnstyledButton
           visibleFrom="sm"
           component={PreloadLink}
-          href={item.link}
+          href={isLogout ? '/' : item.link}
+          onClick={
+            isLogout
+              ? () => {
+                  performLogoutAndRedirect(t, navigate);
+                }
+              : undefined
+          }
           className={classes.link}
           data-active={pathName.startsWith(item.link) || undefined}
         >
@@ -73,7 +96,7 @@ export function getBaseLinksDict() {
   const { t } = useTranslation();
 
   return [
-    { link: '/clubs', label: capitalize(t('clubs_title')), links: [], icon: IconUsers },
+    { link: '/clubs', label: capitalize(t('teams_title')), links: [], icon: IconUsers },
     { link: '/', label: capitalize(t('tournaments_title')), links: [], icon: IconHome },
     {
       link: '/user',
@@ -82,18 +105,10 @@ export function getBaseLinksDict() {
       icon: IconUser,
     },
     {
-      icon: IconDots,
-      link: '',
-      label: t('more_title'),
-      links: [
-        { link: 'https://docs.bracketapp.nl/', label: t('website_title'), icon: IconBrowser },
-        {
-          link: 'https://github.com/evroon/bracket',
-          label: t('github_title'),
-          icon: IconBrandGithub,
-        },
-        { link: `${getBaseApiUrl()}/docs`, label: t('api_docs_title'), icon: IconBook },
-      ],
+      icon: IconLogout,
+      link: '/login',
+      label: t('logout_title'),
+      links: [],
     },
   ];
 }

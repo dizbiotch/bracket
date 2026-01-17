@@ -29,6 +29,7 @@ tournaments = Table(
     Column("auto_assign_courts", Boolean, nullable=False, server_default="f"),
     Column("duration_minutes", Integer, nullable=False, server_default="15"),
     Column("margin_minutes", Integer, nullable=False, server_default="5"),
+    Column("players_only", Boolean, nullable=False, server_default="f"),
     Column(
         "status",
         Enum(
@@ -189,6 +190,7 @@ users = Table(
         ),
         nullable=False,
     ),
+    Column("is_superadmin", Boolean, nullable=False, server_default="f"),
 )
 
 users_x_clubs = Table(

@@ -13,11 +13,12 @@ services:
       - postgres
     environment:
       ENVIRONMENT: DEVELOPMENT
-      CORS_ORIGINS: http://localhost:8400
+      CORS_ORIGINS: http://localhost:3000
       PG_DSN: postgresql://bracket_dev:bracket_dev@postgres:5432/bracket_dev
-      SERVE_FRONTEND: true
-      API_PREFIX: '/api'
-    image: ghcr.io/evroon/bracket
+      SERVE_FRONTEND: false
+      API_PREFIX: ''
+    build:
+      context: ./backend
     networks:
       - bracket_lan
     ports:
@@ -25,6 +26,18 @@ services:
     restart: unless-stopped
     volumes:
       - bracket_static_data:/app/static
+
+  frontend:
+    container_name: bracket-frontend
+    depends_on:
+      - bracket
+    build:
+      context: ./frontend
+    networks:
+      - bracket_lan
+    ports:
+      - 3000:3000
+    restart: unless-stopped
 
   postgres:
     environment:

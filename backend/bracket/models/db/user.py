@@ -18,6 +18,7 @@ class UserBase(BaseModelORM):
     name: str
     created: datetime_utc
     account_type: UserAccountType
+    is_superadmin: bool = False
 
     @property
     def subscription(self) -> Subscription:

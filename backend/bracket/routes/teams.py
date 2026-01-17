@@ -77,6 +77,49 @@ async def update_team_members(
     )
 
 
+@router.post("/tournaments/{tournament_id}/players_to_single_teams", response_model=SuccessResponse)
+async def create_single_player_teams(
+    tournament_id: TournamentId,
+    user: UserPublic = Depends(user_authenticated_for_tournament),
+    _: Tournament = Depends(disallow_archived_tournament),
+) -> SuccessResponse:
+    """Create a one-player team for each player without a team in this tournament.
+
+    This lets you treat a tournament as "players only" while reusing
+    the existing team-based scheduling and ranking logic.
+    """
+
+    existing_teams = await get_teams_with_members(tournament_id)
+    players_without_team = await get_all_players_in_tournament(
+        tournament_id, not_in_team=True
+    )
+
+    if not players_without_team:
+        return SuccessResponse()
+
+    # Respect subscription limits on maximum number of teams
+    check_requirement(existing_teams, user, "max_teams", additions=len(players_without_team))
+
+    async with database.transaction():
+        for player in players_without_team:
+            last_team_id = await database.execute(
+                query=teams.insert(),
+                values=TeamInsertable(
+                    created=datetime_utc.now(),
+                    name=player.name,
+                    tournament_id=tournament_id,
+                    active=player.active,
+                ).model_dump(),
+            )
+
+            await database.execute(
+                query=players_x_teams.insert(),
+                values={"team_id": last_team_id, "player_id": player.id},
+            )
+
+    return SuccessResponse()
+
+
 @router.get("/tournaments/{tournament_id}/teams", response_model=TeamsWithPlayersResponse)
 async def get_teams(
     tournament_id: TournamentId,

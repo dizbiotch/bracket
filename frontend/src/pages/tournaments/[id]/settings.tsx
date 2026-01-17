@@ -136,6 +136,7 @@ function GeneralTournamentForm({
       auto_assign_courts: tournament.auto_assign_courts,
       duration_minutes: tournament.duration_minutes,
       margin_minutes: tournament.margin_minutes,
+      players_only: (tournament as any).players_only ?? false,
     },
 
     validate: {
@@ -163,7 +164,8 @@ function GeneralTournamentForm({
           values.auto_assign_courts,
           values.start_time.toISOString(),
           values.duration_minutes,
-          values.margin_minutes
+          values.margin_minutes,
+          values.players_only
         );
 
         await swrTournamentResponse.mutate();
@@ -227,6 +229,17 @@ function GeneralTournamentForm({
             />
           </Grid.Col>
         </Grid>
+
+        <SegmentedControl
+          fullWidth
+          mt="lg"
+          data={[
+            { label: t('teams_title'), value: 'TEAMS' },
+            { label: t('players_title'), value: 'PLAYERS' },
+          ]}
+          value={form.values.players_only ? 'PLAYERS' : 'TEAMS'}
+          onChange={(value) => form.setFieldValue('players_only', value === 'PLAYERS')}
+        />
       </Fieldset>
       <Fieldset legend={t('dashboard_settings_title')} mt="lg" radius="md">
         <Text fz="sm">{t('dashboard_link_label')}</Text>

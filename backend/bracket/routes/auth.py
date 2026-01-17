@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, Annotated
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from heliclockter import datetime_utc, timedelta
 from jwt import DecodeError, ExpiredSignatureError
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 from starlette.requests import Request
 
 from bracket.config import config
@@ -14,16 +14,22 @@ from bracket.models.db.tournament import Tournament
 from bracket.models.db.user import UserInDB, UserPublic
 from bracket.schema import tournaments
 from bracket.sql.tournaments import sql_get_tournament_by_endpoint_name
-from bracket.sql.users import get_user, get_user_access_to_club, get_user_access_to_tournament
+from bracket.sql.users import (
+    get_user,
+    get_user_access_to_club,
+    get_user_access_to_tournament,
+    update_user_password,
+)
 from bracket.utils.db import fetch_all_parsed
 from bracket.utils.id_types import ClubId, TournamentId, UserId
-from bracket.utils.security import verify_password
+from bracket.utils.security import hash_password, verify_password
 from bracket.utils.types import assert_some
 
 router = APIRouter(prefix=config.api_prefix)
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 7 * 24 * 60  # 1 week
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
@@ -53,6 +59,23 @@ class TokenData(BaseModel):
     email: str | None = None
 
 
+class PasswordResetRequest(BaseModel):
+    email: str
+
+
+class PasswordResetToken(BaseModel):
+    reset_token: str
+
+
+class PasswordResetConfirm(BaseModel):
+    token: str
+    new_password: Annotated[str, StringConstraints(min_length=8, max_length=48)]
+
+
+class PasswordResetSuccess(BaseModel):
+    success: bool = True
+
+
 async def authenticate_user(email: str, password: str) -> UserInDB | None:
     user = await get_user(email)
 
@@ -64,6 +87,13 @@ async def authenticate_user(email: str, password: str) -> UserInDB | None:
 
 def create_access_token(data: dict[str, Any], expires_delta: timedelta) -> str:
     to_encode = data.copy()
+    expire = datetime_utc.now() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, config.jwt_secret, algorithm=ALGORITHM)
+
+
+def create_password_reset_token(email: str, expires_delta: timedelta) -> str:
+    to_encode: dict[str, Any] = {"reset_user": email}
     expire = datetime_utc.now() + expires_delta
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, config.jwt_secret, algorithm=ALGORITHM)
@@ -182,6 +212,59 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
         data={"user": user.email}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer", user_id=user.id)
+
+
+@router.post("/auth/request-password-reset", response_model=PasswordResetToken)
+async def request_password_reset(body: PasswordResetRequest) -> PasswordResetToken:
+    """Create a short-lived password reset token for the given email.
+
+    For now, the token is returned in the response so it can be
+    delivered by the frontend or used during development.
+    """
+
+    user = await get_user(body.email)
+
+    # Always return a response without revealing whether the email exists.
+    if not user:
+        return PasswordResetToken(reset_token="")
+
+    reset_token_expires = timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    reset_token = create_password_reset_token(user.email, reset_token_expires)
+    return PasswordResetToken(reset_token=reset_token)
+
+
+@router.post("/auth/reset-password", response_model=PasswordResetSuccess)
+async def reset_password(body: PasswordResetConfirm) -> PasswordResetSuccess:
+    """Reset a user's password using a previously issued reset token."""
+
+    try:
+        payload = jwt.decode(body.token, config.jwt_secret, algorithms=[ALGORITHM])
+        email_raw = payload.get("reset_user")
+        email = str(email_raw) if email_raw is not None else None
+    except (DecodeError, ExpiredSignatureError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token",
+        ) from None
+
+    if email is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset token",
+        )
+
+    user = await get_user(email=email)
+    if user is None:
+        # Token is invalid if the user no longer exists.
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid reset token",
+        )
+
+    await update_user_password(user.id, hash_password(body.new_password))
+
+    return PasswordResetSuccess()
+    return SuccessResponse()
 
 
 # @router.get("/login", summary='SSO login')

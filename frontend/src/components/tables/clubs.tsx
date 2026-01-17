@@ -4,6 +4,7 @@ import { SWRResponse } from 'swr';
 
 import DeleteButton from '@components/buttons/delete';
 import ClubModal from '@components/modals/club_modal';
+import ClubCollaboratorsModal from '@components/modals/club_collaborators_modal';
 import { EmptyTableInfo } from '@components/no_content/empty_table_info';
 import RequestErrorAlert from '@components/utils/error_alert';
 import { TableSkeletonSingleColumn } from '@components/utils/skeletons';
@@ -32,6 +33,7 @@ export default function ClubsTable({
         <Table.Td>{club.name}</Table.Td>
         <Table.Td>
           <ClubModal swrClubsResponse={swrClubsResponse} club={club} />
+          <ClubCollaboratorsModal club={club} />
           <DeleteButton
             onClick={async () => {
               await deleteClub(club.id);
@@ -43,7 +45,7 @@ export default function ClubsTable({
       </Table.Tr>
     ));
 
-  if (rows.length < 1) return <EmptyTableInfo entity_name={t('clubs_title')} />;
+  if (rows.length < 1) return <EmptyTableInfo entity_name={t('teams_title')} />;
 
   return (
     <TableLayout>

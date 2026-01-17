@@ -11,6 +11,8 @@ from bracket.utils.types import assert_some
 
 
 async def get_user_access_to_tournament(tournament_id: TournamentId, user_id: UserId) -> bool:
+    if await is_superadmin(user_id):
+        return True
     query = """
         SELECT DISTINCT t.id
         FROM users_x_clubs
@@ -22,6 +24,14 @@ async def get_user_access_to_tournament(tournament_id: TournamentId, user_id: Us
 
 
 async def get_which_clubs_has_user_access_to(user_id: UserId) -> set[ClubId]:
+    if await is_superadmin(user_id):
+        query = """
+            SELECT id
+            FROM clubs
+            """
+        result = await database.fetch_all(query=query)
+        return {club["id"] for club in result}
+
     query = """
         SELECT club_id
         FROM users_x_clubs
@@ -32,6 +42,9 @@ async def get_which_clubs_has_user_access_to(user_id: UserId) -> set[ClubId]:
 
 
 async def get_user_access_to_club(club_id: ClubId, user_id: UserId) -> bool:
+    if await is_superadmin(user_id):
+        return True
+
     return club_id in await get_which_clubs_has_user_access_to(user_id)
 
 
@@ -126,6 +139,16 @@ async def check_whether_email_is_in_use(email: str) -> bool:
 
 async def get_user(email: str) -> UserInDB | None:
     return await fetch_one_parsed(database, UserInDB, users.select().where(users.c.email == email))
+
+
+async def is_superadmin(user_id: UserId) -> bool:
+    query = """
+        SELECT is_superadmin
+        FROM users
+        WHERE id = :user_id
+        """
+    result = await database.fetch_one(query=query, values={"user_id": user_id})
+    return bool(result and result["is_superadmin"])
 
 
 async def delete_user_and_owned_clubs(user_id: UserId) -> None:

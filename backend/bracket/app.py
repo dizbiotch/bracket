@@ -43,10 +43,10 @@ init_sentry()
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await database.connect()
-    await init_db_when_empty()
-
     if config.auto_run_migrations and environment is not Environment.CI:
         alembic_run_migrations()
+
+    await init_db_when_empty()
 
     if environment is Environment.PRODUCTION:
         start_cronjobs()

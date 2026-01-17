@@ -79,7 +79,8 @@ async def sql_update_tournament(
             players_can_be_in_multiple_teams = :players_can_be_in_multiple_teams,
             auto_assign_courts = :auto_assign_courts,
             duration_minutes = :duration_minutes,
-            margin_minutes = :margin_minutes
+            margin_minutes = :margin_minutes,
+            players_only = :players_only
         WHERE tournaments.id = :tournament_id
         """
     await database.execute(
@@ -117,7 +118,8 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             players_can_be_in_multiple_teams,
             auto_assign_courts,
             duration_minutes,
-            margin_minutes
+            margin_minutes,
+            players_only
         )
         VALUES (
             :name,
@@ -129,7 +131,8 @@ async def sql_create_tournament(tournament: TournamentBody) -> TournamentId:
             :players_can_be_in_multiple_teams,
             :auto_assign_courts,
             :duration_minutes,
-            :margin_minutes
+            :margin_minutes,
+            :players_only
         )
         RETURNING id
         """

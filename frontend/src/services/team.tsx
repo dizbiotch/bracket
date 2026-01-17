@@ -42,3 +42,9 @@ export async function updateTeam(
     })
   );
 }
+
+export async function createSinglePlayerTeams(tournament_id: number) {
+  return createAxios()
+    .post(`tournaments/${tournament_id}/players_to_single_teams`)
+    .catch((response: any) => handleRequestError(response));
+}
